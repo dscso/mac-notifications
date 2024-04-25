@@ -9,22 +9,14 @@
  * IMPORTS
  * ************************************************************************* */
 
-use objc2::__framework_prelude::{Id, NSObject};
-use objc2::rc::autoreleasepool;
-use objc2::runtime::{NSObjectProtocol, ProtocolObject};
+use objc2::runtime::{ProtocolObject};
 use std::ops::Deref;
-use std::os::raw::c_int;
-use std::sync::Once;
 
-use objc2::rc::Allocated;
 use objc2::{ClassType, DeclaredClass, ProtocolType};
-use objc2_foundation::{
-    MainThreadMarker, NSCopying, NSUserNotification, NSUserNotificationCenter,
-    NSUserNotificationCenterDelegate, NSZone,
-};
+use objc2_foundation::{NSCopying, NSUserNotificationCenter, NSUserNotificationCenterDelegate};
 
 use crate::delegate::RustNotificationDelegate;
-use objc2_foundation::{NSDate, NSDefaultRunLoopMode, NSDictionary, NSRunLoop, NSString};
+use objc2_foundation::{NSDate, NSDefaultRunLoopMode, NSRunLoop, NSString};
 
 pub use crate::notification::NotificationResponse;
 pub use crate::notification_struct::Notification;
@@ -38,23 +30,14 @@ pub mod notification_struct;
  * MODULES
  * ************************************************************************* */
 mod sys {
-    use crate::delegate::RustNotificationDelegate;
-    use objc2_foundation::{NSDictionary, NSString, NSUserNotificationCenterDelegate};
+    use objc2_foundation::{NSString};
 
     #[link(name = "notification")]
     extern "C" {
         pub fn init(app_name: *const NSString); // -> *const NSUserNotificationCenterDelegate;
     }
-
-    #[link(name = "notification")]
-    extern "C" {
-        pub fn run_main_loop_once();
-    }
 }
 
-/**************************************************************************
- * METHODS
- * ************************************************************************* */
 
 /// Initialize the notification system
 /// This function should be called once in the application
@@ -68,15 +51,6 @@ pub fn init(app_name: &str) {
         let notification_center = NSUserNotificationCenter::defaultUserNotificationCenter();
         notification_center.setDelegate(Some(ProtocolObject::from_ref(delegate.as_ref())));
     }
-}
-
-/// # Safety
-/// - This function is not thread safe and should be called once.
-/// - The provided func is not allowed to panic or unwind, it is intended to just send something on a channel or similar
-pub unsafe fn add_notification_callback<F>(callback: F)
-where
-    F: Fn(String, NotificationResponse) + 'static,
-{
 }
 
 pub fn run_main_loop_once() {

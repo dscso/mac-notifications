@@ -1,9 +1,8 @@
 use objc2::msg_send_id;
-use objc2::mutability::{InteriorMutable, MainThreadOnly};
+use objc2::mutability::InteriorMutable;
 use objc2::rc::Id;
 use objc2::runtime::{NSObject, NSObjectProtocol};
 use objc2::{declare_class, ClassType, DeclaredClass};
-use objc2_app_kit::NSApplication;
 use objc2_foundation::{
     MainThreadMarker, NSUserNotification, NSUserNotificationCenter,
     NSUserNotificationCenterDelegate,
@@ -31,7 +30,7 @@ declare_class! {
         #[method(userNotificationCenter:didActivateNotification:)]
         fn user_notification_center_did_activate_notification(
             &self,
-            center: &NSUserNotificationCenter,
+            _center: &NSUserNotificationCenter,
             notification: &NSUserNotification,
         ) {
             println!("Notification activated: {:?}", notification);
@@ -45,16 +44,5 @@ impl RustNotificationDelegate {
             ..Default::default()
         });
         unsafe { msg_send_id![super(this), init] }
-    }
-    pub fn get(mtm: MainThreadMarker) -> Id<Self> {
-        let app = NSApplication::sharedApplication(mtm);
-        let delegate =
-            unsafe { app.delegate() }.expect("a delegate was not configured on the application");
-        if delegate.is_kind_of::<Self>() {
-            // SAFETY: Just checked that the delegate is an instance of `ApplicationDelegate`
-            unsafe { Id::cast(delegate) }
-        } else {
-            panic!("tried to get a delegate that was not the one Winit has registered")
-        }
     }
 }

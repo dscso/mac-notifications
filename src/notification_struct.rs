@@ -1,7 +1,5 @@
-use crate::delegate::RustNotificationDelegate;
 use objc2::rc::Id;
-use objc2::runtime::ProtocolObject;
-use objc2::{class, msg_send, msg_send_id, ClassType};
+use objc2::{msg_send, ClassType};
 use objc2_app_kit::NSImage;
 use objc2_foundation::{NSError, NSString, NSUserNotification, NSUserNotificationCenter, NSURL};
 use std::fmt::Debug;

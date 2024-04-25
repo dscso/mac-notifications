@@ -2,44 +2,6 @@
 #import <objc/runtime.h>
 
 
-typedef void (*NotificationCallback)(NSString* identifier, NSDictionary* event);
-NotificationCallback notificationCallback = nil;
-
-// Define a class that conforms to the NSUserNotificationCenterDelegate protocol
-@interface NotificationCenterDelegate: NSObject <NSUserNotificationCenterDelegate>
-@end
-
-@implementation NotificationCenterDelegate
-
-// Implement the delegate method to handle the user's response to the notification
-- (void)userNotificationCenter:(NSUserNotificationCenter *)center didActivateNotification:(NSUserNotification *)notification {
-    NSLog(@"Notification activated");
-    NSDictionary* actionData;
-    // Handle the user's response to the notification here
-    switch (notification.activationType) {
-        case NSUserNotificationActivationTypeReplied: {
-            actionData = @{@"activationType": @"replied", @"activationValue": notification.response.string};
-            break;
-        }
-        case NSUserNotificationActivationTypeContentsClicked: {
-            actionData = @{@"activationType": @"contentsClicked"};
-            break;
-        }
-        default: {
-            actionData = @{@"activationType": @"none"};
-            break;
-        }
-    }
-
-
-    [center removeDeliveredNotification:notification];
-}
-
-@end
-
-NotificationCenterDelegate * notificationHandler = nil;
-
-
 
 #pragma mark - Swizzle NSBundle
 
