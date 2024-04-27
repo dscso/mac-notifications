@@ -67,18 +67,18 @@ impl Notification {
 }
 
 impl Notification {
-    pub(crate) fn new_notification() -> Self {
+    pub fn new() -> Self {
         Self {
             identifier: Uuid::new_v4().to_string(),
             ..Default::default()
         }
     }
-    pub fn new(_provider: &NotificationProvider) -> Self {
+    /*pub fn new(_provider: &NotificationProvider) -> Self {
         Self {
             identifier: Uuid::new_v4().to_string(),
             ..Default::default()
         }
-    }
+    }*/
     pub fn title(mut self, title: &str) -> Self {
         self.title = Some(title.to_string());
         self

@@ -60,9 +60,6 @@ impl NotificationProvider {
     pub fn run_main_loop_once(&self) {
         run_main_loop_once();
     }
-    pub fn new_notification(&self) -> Notification {
-        Notification::new_notification()
-    }
 }
 pub fn run_main_loop_once() {
     MainThreadMarker::new().expect("run_main_loop_once() must be on the main thread");
