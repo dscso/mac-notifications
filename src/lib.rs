@@ -1,18 +1,9 @@
-// This file is part of prose-app-web
-//
-// Copyright 2024, Prose Foundation
-
+#![feature(let_chains)]
 #![cfg(target_os = "macos")]
 #![allow(improper_ctypes)]
 
-/**************************************************************************
- * IMPORTS
- * ************************************************************************* */
-
-use objc2::runtime::ProtocolObject;
-use std::mem::MaybeUninit;
+use objc2::runtime::NSObjectProtocol;
 use std::ops::Deref;
-use std::sync::Once;
 
 use objc2::rc::Id;
 use objc2::{ClassType, DeclaredClass, ProtocolType};
@@ -34,43 +25,46 @@ pub mod notification_struct;
 /**************************************************************************
  * MODULES
  * ************************************************************************* */
-mod sys {
+pub mod sys {
     use objc2_foundation::NSString;
 
     #[link(name = "notification")]
     extern "C" {
-        pub fn init(app_name: *const NSString); // -> *const NSUserNotificationCenterDelegate;
+        pub fn init(app_name: *const NSString);
     }
 }
-unsafe fn get_delegate() -> &'static Id<RustNotificationDelegate> {
-    static mut DELEGATE: MaybeUninit<Id<RustNotificationDelegate>> = MaybeUninit::uninit();
-    static ONCE: Once = Once::new();
 
-    ONCE.call_once(|| {
-        DELEGATE.write(RustNotificationDelegate::new());
-    });
-
-    DELEGATE.assume_init_ref()
+pub struct NotificationProvider {
+    delegate: Option<Id<RustNotificationDelegate>>,
 }
 
-/// Initialize the notification system
-/// This function should be called once in the application
-pub fn init(app_name: &str) {
-    let app_name = NSString::from_str(app_name);
-    let app_name = app_name.deref();
-
-    unsafe {
-        // check if is main thread
+impl NotificationProvider {
+    pub fn new(app_name: &str) -> Self {
         MainThreadMarker::new().expect("init() must be on the main thread");
+        let app_name = NSString::from_str(app_name);
+        let app_name = app_name.deref();
 
-        sys::init(app_name);
+        unsafe {
+            sys::init(app_name);
+        };
 
-        let notification_center = NSUserNotificationCenter::defaultUserNotificationCenter();
-        let delegate = get_delegate();
-        notification_center.setDelegate(Some(ProtocolObject::from_ref(delegate.as_ref())));
+        Self { delegate: None }
+    }
+
+    pub fn set_callback<F>(&mut self, callback: F)
+    where
+        F: Fn(String, NotificationResponse) + 'static,
+    {
+        let delegate = RustNotificationDelegate::new(callback);
+        self.delegate = Some(delegate);
+    }
+    pub fn run_main_loop_once(&self) {
+        run_main_loop_once();
+    }
+    pub fn new_notification(&self) -> Notification {
+        Notification::new_notification()
     }
 }
-
 pub fn run_main_loop_once() {
     MainThreadMarker::new().expect("run_main_loop_once() must be on the main thread");
 
@@ -78,5 +72,20 @@ pub fn run_main_loop_once() {
         let main_loop = NSRunLoop::mainRunLoop();
         let limit_date = NSDate::dateWithTimeIntervalSinceNow(0.1);
         main_loop.runMode_beforeDate(NSDefaultRunLoopMode, &limit_date);
+    }
+}
+impl Drop for NotificationProvider {
+    fn drop(&mut self) {
+        unsafe {
+            let notification_center = NSUserNotificationCenter::defaultUserNotificationCenter();
+            if let Some(delegate) = notification_center.delegate() {
+                if delegate
+                    .as_ref()
+                    .isKindOfClass(RustNotificationDelegate::class())
+                {
+                    notification_center.setDelegate(None);
+                }
+            }
+        }
     }
 }

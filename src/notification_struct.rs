@@ -1,3 +1,4 @@
+use crate::NotificationProvider;
 use objc2::rc::Id;
 use objc2::{msg_send, ClassType};
 use objc2_app_kit::NSImage;
@@ -24,7 +25,7 @@ pub struct Notification {
 }
 
 impl Notification {
-    pub fn send(self) -> Result<(), NotificationError> {
+    pub fn send(self) -> Result<String, NotificationError> {
         MainThreadMarker::new().expect("send() must be on the main thread");
         unsafe {
             let notification = NSUserNotification::new();
@@ -62,13 +63,16 @@ impl Notification {
             let notification_center = NSUserNotificationCenter::defaultUserNotificationCenter();
             notification_center.deliverNotification(&notification);
 
-            Ok(())
+            Ok(identifier)
         }
     }
 }
 
 impl Notification {
-    pub fn new() -> Self {
+    pub(crate) fn new_notification() -> Self {
+        Self::default()
+    }
+    pub fn new(_provider: &NotificationProvider) -> Self {
         Self::default()
     }
     pub fn title(mut self, title: &str) -> Self {

@@ -1,6 +1,4 @@
-use objc2::rc::autoreleasepool;
-use objc2_foundation::{NSDictionary, NSString};
-use std::ops::Deref;
+use objc2_foundation::{NSUserNotification, NSUserNotificationActivationType};
 
 /// Response from the Notification
 #[derive(Debug)]
@@ -18,30 +16,22 @@ pub enum NotificationResponse {
 }
 
 impl NotificationResponse {
-    /// Create a NotificationResponse from the given Objective C NSDictionary
-    pub(crate) fn from_dictionary(dictionary: &NSDictionary<NSString, NSString>) -> Self {
-        let (action, value) = autoreleasepool(|pool| {
-            let activation_value = NSString::from_str("activationValue");
-            let activation_type = NSString::from_str("activationType");
-
-            let activation_value = unsafe {
-                dictionary
-                    .objectForKey(activation_value.deref())
-                    .map(|str| str.as_str(pool).to_owned())
-            };
-            let activation_type = unsafe {
-                dictionary
-                    .objectForKey(activation_type.deref())
-                    .map(|str| str.as_str(pool).to_owned())
-            };
-            (activation_type, activation_value)
-        });
-        match action.as_deref() {
-            Some("actionClicked") => Self::ActionButton(value.unwrap_or_else(|| "".to_string())),
-            Some("replied") => Self::Reply(value.unwrap_or_else(|| "".to_string())),
-            Some("contentsClicked") => Self::Click,
-
-            _ => unreachable!("Unknown notification response: {:?}", dictionary),
-        }
+    pub(crate) fn from_dictionary(notification: &NSUserNotification) -> Self {
+        return unsafe {
+            match notification.activationType() {
+                NSUserNotificationActivationType::None => Self::None,
+                NSUserNotificationActivationType::ActionButtonClicked => {
+                    return Self::ActionButton("todo".to_string());
+                }
+                NSUserNotificationActivationType::ContentsClicked => Self::Click,
+                NSUserNotificationActivationType::Replied => {
+                    Self::Reply(notification.response().unwrap().string().to_string())
+                }
+                _ => unreachable!(
+                    "Unknown notification response: {:?}",
+                    notification.activationType()
+                ),
+            }
+        };
     }
 }

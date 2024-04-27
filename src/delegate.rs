@@ -1,15 +1,18 @@
+use crate::NotificationResponse;
 use objc2::msg_send_id;
 use objc2::mutability::MainThreadOnly;
 use objc2::rc::Id;
-use objc2::runtime::{NSObject, NSObjectProtocol};
+use objc2::runtime::{NSObject, NSObjectProtocol, ProtocolObject};
 use objc2::{declare_class, ClassType, DeclaredClass};
 use objc2_foundation::{
     MainThreadMarker, NSUserNotification, NSUserNotificationCenter,
     NSUserNotificationCenterDelegate,
 };
 
-#[derive(Debug, Default)]
-pub(super) struct State {}
+type Callback = dyn Fn(String, NotificationResponse);
+pub(super) struct State {
+    callback: Box<Callback>,
+}
 
 declare_class! {
     pub(super) struct RustNotificationDelegate;
@@ -33,43 +36,36 @@ declare_class! {
             _center: &NSUserNotificationCenter,
             notification: &NSUserNotification,
         ) {
-
-            unsafe {
-                match notification.response() {
-                    Some(str) => {
-                        println!("Notification activated with response: {:?}", str.as_ref());
-                    }
-                    None => {
-                        println!("Notification activated: {:?}", notification);
-                    }
-                }
-            }
+            let response = NotificationResponse::from_dictionary(notification);
+            let id = unsafe {notification.identifier().as_ref().unwrap().to_string() };
+            self.ivars().callback.as_ref()(id, response);
         }
     }
 }
 
 impl RustNotificationDelegate {
-    pub fn new() -> Id<Self> {
+    pub fn new<F>(callback: F) -> Id<Self>
+    where
+        F: Fn(String, NotificationResponse) + 'static,
+    {
         let this = MainThreadMarker::new().unwrap().alloc().set_ivars(State {
-            ..Default::default()
+            callback: Box::new(callback),
         });
-        unsafe { msg_send_id![super(this), init] }
-    }
-    pub fn get(mtm: MainThreadMarker) -> Id<Self> {
-        let app = unsafe { NSUserNotificationCenter::defaultUserNotificationCenter() };
-        let delegate =
-            unsafe { app.delegate() }.expect("a delegate was not configured on the application");
-        if delegate.is_kind_of::<Self>() {
-            // SAFETY: Just checked that the delegate is an instance of `ApplicationDelegate`
-            unsafe { Id::cast(delegate) }
-        } else {
-            panic!("tried to get a delegate that was not the one Winit has registered")
+
+        let delegate: Id<Self> = unsafe { msg_send_id![super(this), init] };
+        unsafe {
+            let notification_center = NSUserNotificationCenter::defaultUserNotificationCenter();
+            notification_center.setDelegate(Some(ProtocolObject::from_ref(delegate.as_ref())));
         }
+        delegate
     }
 }
 
 impl Drop for RustNotificationDelegate {
     fn drop(&mut self) {
-        println!("Dropping RustNotificationDelegate");
+        unsafe {
+            let notification_center = NSUserNotificationCenter::defaultUserNotificationCenter();
+            notification_center.setDelegate(None);
+        }
     }
 }
