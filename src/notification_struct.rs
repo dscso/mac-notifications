@@ -1,7 +1,9 @@
 use objc2::rc::Id;
 use objc2::{msg_send, ClassType};
 use objc2_app_kit::NSImage;
-use objc2_foundation::{NSError, NSString, NSUserNotification, NSUserNotificationCenter, NSURL};
+use objc2_foundation::{
+    MainThreadMarker, NSError, NSString, NSUserNotification, NSUserNotificationCenter, NSURL,
+};
 use std::fmt::Debug;
 use uuid::Uuid;
 
@@ -23,6 +25,7 @@ pub struct Notification {
 
 impl Notification {
     pub fn send(self) -> Result<(), NotificationError> {
+        MainThreadMarker::new().expect("send() must be on the main thread");
         unsafe {
             let notification = NSUserNotification::new();
 
