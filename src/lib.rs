@@ -1,26 +1,25 @@
 #![feature(let_chains)]
 #![cfg(target_os = "macos")]
 #![allow(improper_ctypes)]
+#![allow(deprecated)]
 
 use objc2::runtime::NSObjectProtocol;
 use std::ops::Deref;
 
 use objc2::rc::Id;
-use objc2::{ClassType, DeclaredClass, ProtocolType};
-use objc2_foundation::{
-    MainThreadMarker, NSCopying, NSUserNotificationCenter, NSUserNotificationCenterDelegate,
-};
+use objc2::ClassType;
+use objc2_foundation::{MainThreadMarker, NSUserNotificationCenter};
 
 use crate::delegate::RustNotificationDelegate;
 use objc2_foundation::{NSDate, NSDefaultRunLoopMode, NSRunLoop, NSString};
 
-pub use crate::notification::NotificationResponse;
-pub use crate::notification_struct::Notification;
+pub use crate::notification::Notification;
+pub use crate::notification_response::NotificationResponse;
 
 mod delegate;
 pub mod misc;
-mod notification;
-pub mod notification_struct;
+pub mod notification;
+mod notification_response;
 
 /**************************************************************************
  * MODULES

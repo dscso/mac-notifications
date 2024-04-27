@@ -15,11 +15,8 @@ objc2-foundation = { version = "0.2.0", features = [
     "NSString",
     "NSNotification",
     "NSError",
-    "NSURL",
     "NSThread",
-    "NSObjCRuntime",
     "NSRunLoop",
-    "NSZone",
 ] }
 objc2-app-kit = { version = "0.2.0", features = [
     "NSImage",
