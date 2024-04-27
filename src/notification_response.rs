@@ -1,7 +1,7 @@
 use objc2_foundation::{NSUserNotification, NSUserNotificationActivationType};
 
 /// Response from the Notification
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NotificationResponse {
     /// No interaction has occured
     None,

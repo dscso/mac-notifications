@@ -1,4 +1,3 @@
-use crate::NotificationProvider;
 use objc2::rc::Id;
 use objc2::{msg_send, ClassType};
 use objc2_app_kit::NSImage;
@@ -73,12 +72,6 @@ impl Notification {
             ..Default::default()
         }
     }
-    /*pub fn new(_provider: &NotificationProvider) -> Self {
-        Self {
-            identifier: Uuid::new_v4().to_string(),
-            ..Default::default()
-        }
-    }*/
     pub fn title(mut self, title: &str) -> Self {
         self.title = Some(title.to_string());
         self
