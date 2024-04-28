@@ -41,10 +41,12 @@ void init(NSString* appName) {
         NSAppleScript* findScript = [[NSAppleScript alloc] initWithSource:findString];
         NSAppleEventDescriptor* resultDescriptor = [findScript executeAndReturnError:nil];
 
-        NSString *newbundleIdentifier = [resultDescriptor stringValue];
+        NSString *newbundleIdentifier = [NSString stringWithFormat:@"%@", [resultDescriptor stringValue]];
+        [findScript release];
 
         if (installNSBundleHook()) {
-            if (LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL) != NULL) {
+        NSArray<NSURL*> *urls = CFBridgingRelease(LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL));
+            if (urls.count > 0) {
                 [fakeBundleIdentifier release]; // Release old value - nil is ok
                 fakeBundleIdentifier = newbundleIdentifier;
                 [newbundleIdentifier retain]; // Retain new value - it outlives this scope
