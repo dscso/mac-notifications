@@ -37,8 +37,12 @@ declare_class! {
             notification: &NSUserNotification,
         ) {
             let response = NotificationResponse::from_dictionary(notification);
-            let id = unsafe {notification.identifier().as_ref().unwrap().to_string() };
-            self.ivars().callback.as_ref()(id, response);
+
+            let id = unsafe { notification.identifier() };
+            match id {
+                Some(id) => self.ivars().callback.as_ref()(id.as_ref().to_string(), response),
+                None => eprintln!("Notification has no identifier! This should never happen! Do you have another application providing notifications for the same app name?")
+            }
         }
     }
 }

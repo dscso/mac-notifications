@@ -1,11 +1,12 @@
-use crate::NotificationProvider;
 use objc2::rc::Id;
 use objc2::{msg_send, ClassType};
 use objc2_app_kit::NSImage;
 use objc2_foundation::{
-    MainThreadMarker, NSError, NSString, NSUserNotification, NSUserNotificationCenter, NSURL,
+    MainThreadMarker, NSDate, NSError, NSString, NSUserNotification, NSUserNotificationCenter,
+    NSURL,
 };
 use std::fmt::Debug;
+use std::time::SystemTime;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Default)]
@@ -20,60 +21,88 @@ pub struct Notification {
     image: Option<String>,
     /// The sound that plays when the system delivers the notification.
     sound: Option<String>,
+    /// Delivery date
+    delivery_date: Option<SystemTime>,
     /// Has reply button
     reply: bool,
 }
 
-impl Notification {
-    pub fn send(self) -> Result<String, NotificationError> {
-        MainThreadMarker::new().expect("send() must be on the main thread");
+impl From<&NSUserNotification> for Notification {
+    fn from(notification: &NSUserNotification) -> Self {
+        unsafe {
+            Self {
+                identifier: notification.identifier().unwrap().to_string(),
+                title: notification.title().map(|s| s.to_string()),
+                subtitle: notification.subtitle().map(|s| s.to_string()),
+                sound: notification.soundName().map(|s| s.to_string()),
+                reply: notification.hasReplyButton(),
+                delivery_date: None,
+                image: None,
+            }
+        }
+    }
+}
+impl From<&Notification> for Id<NSUserNotification> {
+    fn from(value: &Notification) -> Self {
         unsafe {
             let notification = NSUserNotification::new();
 
-            let ns_str = NSString::from_str(self.identifier.as_str());
+            let ns_str = NSString::from_str(value.identifier.as_str());
             notification.setIdentifier(Some(&ns_str));
 
-            if let Some(title) = self.title {
+            if let Some(title) = value.title.as_ref() {
                 let ns_str = NSString::from_str(&title);
                 notification.setTitle(Some(&ns_str));
             }
 
-            if let Some(subtitle) = self.subtitle {
+            if let Some(subtitle) = value.subtitle.as_ref() {
                 let ns_str = NSString::from_str(&subtitle);
                 notification.setSubtitle(Some(&ns_str));
             }
-            if let Some(sound) = self.sound {
+            if let Some(sound) = value.sound.as_ref() {
                 let ns_str = NSString::from_str(&sound);
                 notification.setSoundName(Some(&ns_str));
             }
-
-            if let Some(image) = self.image {
+            if let Some(delivery_date) = value.delivery_date {
+                let timestamp = delivery_date
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+                let date = NSDate::dateWithTimeIntervalSince1970(timestamp as f64);
+                notification.setDeliveryDate(Some(date.as_ref()));
+            }
+            if let Some(image) = value.image.as_ref() {
                 let ns_str = NSString::from_str(&image);
                 let ns_url = NSURL::URLWithString(&ns_str).unwrap();
                 let ns_image = NSImage::initWithContentsOfURL(NSImage::alloc(), &ns_url).unwrap();
                 let _: () = msg_send![notification.as_ref(), setContentImage:ns_image.as_ref()];
             }
 
-            if self.reply {
-                notification.setHasReplyButton(self.reply);
+            if value.reply {
+                notification.setHasReplyButton(value.reply);
             }
-
-            let notification_center = NSUserNotificationCenter::defaultUserNotificationCenter();
-            notification_center.deliverNotification(&notification);
-
-            Ok(self.identifier)
+            notification
         }
     }
 }
 
 impl Notification {
-    pub(crate) fn new_notification() -> Self {
-        Self {
-            identifier: Uuid::new_v4().to_string(),
-            ..Default::default()
+    pub fn send(self) -> Result<String, NotificationError> {
+        MainThreadMarker::new().expect("send() must be on the main thread");
+        let identifier = self.identifier.clone();
+        unsafe {
+            let notification = Id::<NSUserNotification>::from(&self);
+            let notification_center = NSUserNotificationCenter::defaultUserNotificationCenter();
+            match self.delivery_date {
+                Some(_) => notification_center.scheduleNotification(notification.as_ref()),
+                None => notification_center.deliverNotification(notification.as_ref()),
+            }
         }
+        Ok(identifier)
     }
-    pub fn new(_provider: &NotificationProvider) -> Self {
+}
+impl Notification {
+    pub fn new() -> Self {
         Self {
             identifier: Uuid::new_v4().to_string(),
             ..Default::default()
@@ -89,6 +118,8 @@ impl Notification {
         self
     }
 
+    /// This can be either a file path or a URL
+    /// base64 encoded images are not supported too
     pub fn image(mut self, image: &str) -> Self {
         self.image = Some(image.to_string());
         self
@@ -101,6 +132,10 @@ impl Notification {
 
     pub fn reply(mut self, reply: bool) -> Self {
         self.reply = reply;
+        self
+    }
+    pub fn delivery_date(mut self, delivery_date: SystemTime) -> Self {
+        self.delivery_date = Some(delivery_date);
         self
     }
 }
