@@ -9,6 +9,19 @@ use std::fmt::Debug;
 use std::time::SystemTime;
 use uuid::Uuid;
 
+/// # Notification Struct
+///
+/// ```rust no_run
+/// use mac_notifications::Notification;
+///
+/// // don't forget to initialize the provider!
+///
+/// let notification = Notification::new()
+///     .title("Hello")
+///     .subtitle("This is a notification")
+///     .reply(true)
+///     .send().unwrap();
+/// ```
 #[derive(Debug, Clone, Default)]
 pub struct Notification {
     /// The unique identifier for the notification.
@@ -42,28 +55,28 @@ impl From<&NSUserNotification> for Notification {
         }
     }
 }
-impl From<&Notification> for Id<NSUserNotification> {
-    fn from(value: &Notification) -> Self {
+impl Into<Id<NSUserNotification>> for Notification {
+    fn into(self) -> Id<NSUserNotification> {
         unsafe {
             let notification = NSUserNotification::new();
 
-            let ns_str = NSString::from_str(value.identifier.as_str());
+            let ns_str = NSString::from_str(self.identifier.as_str());
             notification.setIdentifier(Some(&ns_str));
 
-            if let Some(title) = value.title.as_ref() {
+            if let Some(title) = self.title.as_ref() {
                 let ns_str = NSString::from_str(&title);
                 notification.setTitle(Some(&ns_str));
             }
 
-            if let Some(subtitle) = value.subtitle.as_ref() {
+            if let Some(subtitle) = self.subtitle.as_ref() {
                 let ns_str = NSString::from_str(&subtitle);
                 notification.setSubtitle(Some(&ns_str));
             }
-            if let Some(sound) = value.sound.as_ref() {
+            if let Some(sound) = self.sound.as_ref() {
                 let ns_str = NSString::from_str(&sound);
                 notification.setSoundName(Some(&ns_str));
             }
-            if let Some(delivery_date) = value.delivery_date {
+            if let Some(delivery_date) = self.delivery_date {
                 let timestamp = delivery_date
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap()
@@ -71,15 +84,15 @@ impl From<&Notification> for Id<NSUserNotification> {
                 let date = NSDate::dateWithTimeIntervalSince1970(timestamp as f64);
                 notification.setDeliveryDate(Some(date.as_ref()));
             }
-            if let Some(image) = value.image.as_ref() {
+            if let Some(image) = self.image.as_ref() {
                 let ns_str = NSString::from_str(&image);
                 let ns_url = NSURL::URLWithString(&ns_str).unwrap();
                 let ns_image = NSImage::initWithContentsOfURL(NSImage::alloc(), &ns_url).unwrap();
                 let _: () = msg_send![notification.as_ref(), setContentImage:ns_image.as_ref()];
             }
 
-            if value.reply {
-                notification.setHasReplyButton(value.reply);
+            if self.reply {
+                notification.setHasReplyButton(self.reply);
             }
             notification
         }
@@ -90,10 +103,11 @@ impl Notification {
     pub fn send(self) -> Result<String, NotificationError> {
         MainThreadMarker::new().expect("send() must be on the main thread");
         let identifier = self.identifier.clone();
+        let delivery_date = self.delivery_date.clone();
         unsafe {
-            let notification = Id::<NSUserNotification>::from(&self);
+            let notification: Id<NSUserNotification> = self.into();
             let notification_center = NSUserNotificationCenter::defaultUserNotificationCenter();
-            match self.delivery_date {
+            match delivery_date {
                 Some(_) => notification_center.scheduleNotification(notification.as_ref()),
                 None => notification_center.deliverNotification(notification.as_ref()),
             }

@@ -1,6 +1,6 @@
 [package]
-name = "notifications"
-version = "0.0.0"
+name = "mac-notifications"
+version = "0.0.1"
 edition = "2021"
 
 [build-dependencies]

@@ -1,10 +1,12 @@
-use std::ops::Deref;
-use objc2::ClassType;
-use objc2::rc::Id;
-use objc2::runtime::NSObjectProtocol;
-use objc2_foundation::{MainThreadMarker, NSDate, NSDefaultRunLoopMode, NSRunLoop, NSString, NSUserNotificationCenter};
 use crate::delegate::RustNotificationDelegate;
 use crate::{Notification, NotificationResponse};
+use objc2::rc::Id;
+use objc2::runtime::NSObjectProtocol;
+use objc2::ClassType;
+use objc2_foundation::{
+    MainThreadMarker, NSDate, NSDefaultRunLoopMode, NSRunLoop, NSString, NSUserNotificationCenter,
+};
+use std::ops::Deref;
 
 mod sys {
     use objc2_foundation::NSString;
@@ -18,7 +20,7 @@ mod sys {
 /// the main struct for the notification provider
 /// # Example
 /// ```rust
-/// use notifications::{Notification, NotificationProvider};
+/// use mac_notifications::{Notification, NotificationProvider};
 ///
 /// let mut provider = NotificationProvider::new("Terminal");
 /// // callback for notification interaction
@@ -61,8 +63,8 @@ impl NotificationProvider {
 
     /// This callback gets called when a notification was interacted with
     pub fn set_callback<F>(&mut self, callback: F)
-        where
-            F: Fn(String, NotificationResponse) + 'static,
+    where
+        F: Fn(String, NotificationResponse) + 'static,
     {
         let delegate = RustNotificationDelegate::new(callback);
         self.delegate = Some(delegate);
@@ -74,7 +76,7 @@ impl NotificationProvider {
     /// Returns a vector of all notifications
     /// # Example
     /// ```rust
-    /// use notifications::{Notification, NotificationProvider};
+    /// use mac_notifications::{Notification, NotificationProvider};
     ///
     /// let mut provider = NotificationProvider::new("Terminal");
     /// Notification::new().title("Hello").send().unwrap();
@@ -100,7 +102,7 @@ impl NotificationProvider {
     /// Deletes a notification by its identifier
     /// # Example
     /// ```rust
-    /// use notifications::{Notification, NotificationProvider};
+    /// use mac_notifications::{Notification, NotificationProvider};
     ///
     /// let mut provider = NotificationProvider::new("Terminal");
     ///
@@ -132,7 +134,7 @@ impl NotificationProvider {
     /// Deletes all notifications
     /// # Example
     /// ```rust
-    /// use notifications::{Notification, NotificationProvider};
+    /// use mac_notifications::{Notification, NotificationProvider};
     ///
     /// let mut provider = NotificationProvider::new("Terminal");
     ///

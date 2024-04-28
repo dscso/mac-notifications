@@ -45,7 +45,7 @@ void init(NSString* appName) {
         [findScript release];
 
         if (installNSBundleHook()) {
-        NSArray<NSURL*> *urls = CFBridgingRelease(LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL));
+            NSArray<NSURL*> *urls = CFBridgingRelease(LSCopyApplicationURLsForBundleIdentifier((CFStringRef)newbundleIdentifier, NULL));
             if (urls.count > 0) {
                 [fakeBundleIdentifier release]; // Release old value - nil is ok
                 fakeBundleIdentifier = newbundleIdentifier;

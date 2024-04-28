@@ -1,4 +1,4 @@
-use notifications::*;
+use mac_notifications::*;
 
 fn main() {
     let mut provider = NotificationProvider::new("terminal");
@@ -22,7 +22,7 @@ fn main() {
         provider.run_main_loop_once();
     }
     println!("all notifications: {:?}", provider.get_all_notifications());
-    println!("deleting old notificaiton...");
+    println!("deleting old notification(s)...");
     provider.delete(id.as_str());
 
     println!("all notifications: {:?}", provider.get_all_notifications());
