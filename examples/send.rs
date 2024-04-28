@@ -11,12 +11,21 @@ fn main() {
     let id = Notification::new()
         .reply(true)
         .title("title")
-        .subtitle("subtitle")
+        .subtitle("This notification will be deleted in ~5sec... Interact with it before that!")
         .image(image.as_ref())
+        .delivery_date(std::time::SystemTime::now() - std::time::Duration::from_secs(100))
         .send()
-        .unwrap();
-    println!("notification id: {}", id);
+        .expect("TODO: panic message");
+
     for _ in 0..50 {
         provider.run_main_loop_once();
     }
+    println!("all notifications: {:?}", provider.get_all_notifications());
+    println!("deleting old notificaiton...");
+    provider.delete(id.as_str());
+
+    println!("all notifications: {:?}", provider.get_all_notifications());
+    /*for _ in 0..50 {
+        provider.run_main_loop_once();
+    }*/
 }

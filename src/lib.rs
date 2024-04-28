@@ -1,6 +1,4 @@
-#![feature(let_chains)]
 #![cfg(target_os = "macos")]
-#![allow(improper_ctypes)]
 #![allow(deprecated)]
 
 use objc2::runtime::NSObjectProtocol;
@@ -35,6 +33,7 @@ pub mod sys {
 
 pub struct NotificationProvider {
     delegate: Option<Id<RustNotificationDelegate>>,
+    center: Id<NSUserNotificationCenter>,
 }
 
 impl NotificationProvider {
@@ -46,8 +45,11 @@ impl NotificationProvider {
         unsafe {
             sys::init(app_name);
         };
-
-        Self { delegate: None }
+        let center = unsafe { NSUserNotificationCenter::defaultUserNotificationCenter() };
+        Self {
+            delegate: None,
+            center,
+        }
     }
 
     pub fn set_callback<F>(&mut self, callback: F)
@@ -59,6 +61,46 @@ impl NotificationProvider {
     }
     pub fn run_main_loop_once(&self) {
         run_main_loop_once();
+    }
+
+    pub fn get_all_notifications(&self) -> Vec<Notification> {
+        MainThreadMarker::new().expect("get_all_notificaitons() must be on the main thread");
+        let mut notifications = vec![];
+        unsafe {
+            let notification_center = NSUserNotificationCenter::defaultUserNotificationCenter();
+            let notifications_array = notification_center.deliveredNotifications();
+            let count = notifications_array.count();
+            for i in 0..count {
+                let notification = notifications_array.objectAtIndex(i);
+                notifications.push(Notification::from(notification.as_ref()));
+            }
+        }
+        notifications
+    }
+
+    pub fn delete(&self, identifier: &str) {
+        MainThreadMarker::new().expect("delete() must be on the main thread");
+        unsafe {
+            let notification_center = NSUserNotificationCenter::defaultUserNotificationCenter();
+            let notifications_array = notification_center.deliveredNotifications();
+            let count = notifications_array.count();
+            for i in 0..count {
+                let notification = notifications_array.objectAtIndex(i);
+                let notification = notification.as_ref();
+                if let Some(id) = notification.identifier() {
+                    if id.to_string() == identifier {
+                        notification_center.removeDeliveredNotification(notification);
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn delete_all(&self) {
+        MainThreadMarker::new().expect("delete_all() must be on the main thread");
+        unsafe {
+            self.center.removeAllDeliveredNotifications();
+        }
     }
 }
 pub fn run_main_loop_once() {
