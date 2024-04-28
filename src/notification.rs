@@ -118,6 +118,8 @@ impl Notification {
         self
     }
 
+    /// This can be either a file path or a URL
+    /// base64 encoded images are not supported too
     pub fn image(mut self, image: &str) -> Self {
         self.image = Some(image.to_string());
         self
